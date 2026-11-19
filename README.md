@@ -19,9 +19,10 @@ An AI-driven digital health initiative to screen, support, and follow up working
 6. [Phase II: AI Intervention & น้องปิงปอง Chatbot](#-phase-ii-ai-intervention--น้องปิงปอง-chatbot)
 7. [Phase III: Monitoring & Evaluation (การติดตามและประเมินผล)](#-phase-iii-monitoring--evaluation)
 8. [แผนงาน 5 ปี และงบประมาณ (5-Year Plan & Budget)](#-แผนงาน-5-ปี-และงบประมาณ-5-year-plan--budget)
-9. [สไลด์นำเสนอ & เอกสาร (Presentations & Docs)](#-สไลด์นำเสนอ--เอกสาร-presentations--docs)
-10. [ภาพสื่อและคาแรคเตอร์ดีไซน์ (Assets & Character Designs)](#-ภาพสื่อและคาแรคเตอร์ดีไซน์-assets--character-designs)
-11. [โครงสร้างโปรเจกต์ (Project Structure)](#-โครงสร้างโปรเจกต์-project-structure)
+9. [ทดลองเล่น Demo (Prototype v3)](#️-ทดลองเล่น-demo-prototype-v3)
+10. [สไลด์นำเสนอ & เอกสาร (Presentations & Docs)](#-สไลด์นำเสนอ--เอกสาร-presentations--docs)
+11. [ภาพสื่อและคาแรคเตอร์ดีไซน์ (Assets & Character Designs)](#-ภาพสื่อและคาแรคเตอร์ดีไซน์-assets--character-designs)
+12. [โครงสร้างโปรเจกต์ (Project Structure)](#-โครงสร้างโปรเจกต์-project-structure)
 
 ---
 
@@ -167,6 +168,14 @@ An AI-driven digital health initiative to screen, support, and follow up working
 
 ---
 
+## 🕹️ ทดลองเล่น Demo (Prototype v3)
+
+**เปิดเล่น:** [seraght.github.io/ssime-pbri-model/demo/](https://seraght.github.io/ssime-pbri-model/demo/) · วิธีเล่นและสถานการณ์ทดสอบ 6 แบบ: [demo/README.md](demo/README.md)
+
+ต้นแบบที่ทิ้งได้ ใช้ผู้ป่วยสมมติทั้งหมด ลำดับคัดกรองคือ ① BEFAST (AI จำลอง) → ② ปิงปอง 7 สี → ③ Thai CV Risk Score มีปุ่มสลับไทย/English เมื่อเปิดนอก claude.ai แชตบอตน้องปิงปองจะใช้บทตอบสำรองจากคู่มือแทน LLM
+
+---
+
 ## 📑 สไลด์นำเสนอ & เอกสาร (Presentations & Docs)
 
 ไฟล์สไลด์นำเสนอต้นฉบับ (PowerPoint) และเอกสารสรุปเนื้อหา:
@@ -202,6 +211,10 @@ ssime-pbri-model/
 │   ├── 01-nong-ping-pong-7-colors-health-model.jpg
 │   ├── 02-nong-ping-pong-4-concepts.jpg
 │   └── 03-nong-ping-pong-character-designs.jpg
+├── demo/
+│   ├── index.html          (Prototype v3)
+│   ├── mascot.jpg
+│   └── README.md
 ├── docs/
 │   ├── presentation_slides_en.md
 │   └── presentation_slides_th.md

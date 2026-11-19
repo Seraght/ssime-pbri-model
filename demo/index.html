@@ -1,0 +1,667 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>SSIME Prototype v3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap">
+<style>
+/* PROTOTYPE v3 (throwaway): patient phone app on the left, the logic lab (state, walkthroughs) on the right, committee panel below */
+:root{
+  --bg:#E9EFED; --phone:#FFFFFF; --soft:#F3F6F5; --ink:#18221F; --muted:#4A5854; --line:#CFD8D5;
+  --accent:#1F5F8B; --accent-ink:#FFFFFF; --green:#06703A; --chat-bg:#DCE6EE; --bubble:#FFFFFF; --mine:#B8E6C6;
+  --warn:#A3201D; --warn-bg:#FDE8E7; --ai:#8A4B00; --ai-bg:#FFF1DC; --hl:#FFF6C2;
+  --font-head:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+  --font-body:"Sarabun","IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1513; --phone:#18211E; --soft:#1F2926; --ink:#E5EDEA; --muted:#A5B3AE; --line:#33413C;
+  --accent:#7CB8E4; --accent-ink:#0B1B26; --green:#6FD39A; --chat-bg:#1E2A33; --bubble:#26323A; --mine:#1E4A2E;
+  --warn:#FF9C97; --warn-bg:#3D1715; --ai:#FFC97A; --ai-bg:#3A2A10; --hl:#3A3410; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1513; --phone:#18211E; --soft:#1F2926; --ink:#E5EDEA; --muted:#A5B3AE; --line:#33413C;
+  --accent:#7CB8E4; --accent-ink:#0B1B26; --green:#6FD39A; --chat-bg:#1E2A33; --bubble:#26323A; --mine:#1E4A2E;
+  --warn:#FF9C97; --warn-bg:#3D1715; --ai:#FFC97A; --ai-bg:#3A2A10; --hl:#3A3410; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:18px;line-height:1.8;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+h1,h2,h3{font-family:var(--font-head);font-weight:600;line-height:1.4;margin:0;text-wrap:balance}
+h1{font-size:26px} h2{font-size:22px} h3{font-size:19px} p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.page{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.top{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-start}
+.top .q{max-width:78ch;color:var(--muted);font-size:17px}
+.proto{font-family:var(--font-head);font-size:14px;background:var(--ai-bg);color:var(--ai);border-radius:999px;padding:1px 12px;display:inline-block;margin-bottom:4px}
+.lang{display:flex;gap:4px}
+.chip{border:1px solid var(--line);background:var(--phone);border-radius:999px;padding:4px 14px;font-size:16px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.main{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}
+@media (min-width:1000px){.main{grid-template-columns:400px 1fr}}
+.phone{width:100%;max-width:400px;margin:0 auto;background:var(--phone);border:1px solid var(--line);border-radius:32px;overflow:hidden;display:flex;flex-direction:column;height:780px}
+.bar{display:flex;justify-content:space-between;align-items:center;padding:12px 18px 6px;font-size:15px;color:var(--muted)}
+.view{flex:1;overflow-y:auto;padding:8px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.view>*{flex-shrink:0}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--phone)}
+.tabs button{border:0;background:none;padding:8px 2px 10px;font-family:var(--font-head);font-size:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.4}
+.tabs button .ic{width:26px;height:26px;border-radius:50%;border:2px solid currentColor;display:grid;place-items:center;font-size:13px;font-weight:600}
+.tabs button[aria-current="true"]{color:var(--accent)}
+.ball{width:140px;height:140px;border-radius:50%;margin:6px auto 0;border:2px solid var(--line)}
+.big{font-family:var(--font-head);font-weight:600;font-size:26px;text-align:center;line-height:1.35}
+.center{text-align:center} .muted{color:var(--muted)} .small{font-size:16px}
+.dots{display:flex;gap:8px;justify-content:center}
+.dots i{width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:block}
+.dots i.on{outline:3px solid var(--accent);outline-offset:2px}
+.btn{border:0;border-radius:14px;padding:12px;font-family:var(--font-head);font-weight:500;font-size:18px;background:var(--accent);color:var(--accent-ink);width:100%;line-height:1.5}
+.btn.alt{background:transparent;border:1.5px solid var(--accent);color:var(--accent)}
+.btn.warn{background:var(--warn-bg);color:var(--warn);border:1.5px solid var(--warn)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.card b{font-family:var(--font-head);font-weight:600}
+.prog{display:flex;gap:6px}.prog i{flex:1;height:6px;border-radius:3px;background:var(--line)}.prog i.on{background:var(--accent)}
+.qq{font-family:var(--font-head);font-weight:500;font-size:22px;text-align:center;line-height:1.5}
+.num{font-family:var(--font-head);font-size:52px;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;min-height:72px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pad button{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:8px 0;font-family:var(--font-head);font-size:24px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--soft);border-radius:14px;padding:10px 14px}
+.seg{display:flex;gap:6px;flex:0 0 auto}.seg button{border:1px solid var(--line);background:var(--phone);border-radius:10px;padding:4px 12px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.err{color:var(--warn);font-size:16px;text-align:center;min-height:1.6em}
+.faces{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.faces button{border:2px solid var(--line);background:var(--soft);border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:16px}
+.faces button[aria-pressed="true"]{border-color:var(--accent)}
+.sim{font-family:var(--font-head);font-size:13px;background:var(--ai-bg);color:var(--ai);border-radius:999px;padding:0 10px;align-self:flex-start}
+.airesult{border-left:4px solid var(--ai);background:var(--ai-bg);border-radius:0 12px 12px 0;padding:8px 12px;font-size:16px}
+.airesult.bad{border-color:var(--warn);background:var(--warn-bg);color:var(--warn)}
+.mission{display:flex;gap:12px;align-items:center;background:var(--soft);border-radius:14px;padding:12px}
+.mission .tag{width:42px;height:42px;flex:0 0 auto;border-radius:12px;background:var(--phone);border:1px solid var(--line);display:grid;place-items:center;font-family:var(--font-head);font-weight:600}
+.mission .body{flex:1;min-width:0}
+.done{border:1.5px solid var(--green);color:var(--green);background:transparent;border-radius:10px;padding:4px 10px;font-size:15px;white-space:nowrap}
+.done[aria-pressed="true"]{background:var(--green);color:var(--phone)}
+.why{font-size:15px;color:var(--ai)}
+.chatv{background:var(--chat-bg);padding:12px}
+.msgs{display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;gap:8px;align-items:flex-end}
+.mrow img{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#F8EFEA;flex:0 0 auto}
+.m{max-width:85%;padding:8px 12px;border-radius:16px;background:var(--bubble);white-space:pre-wrap;overflow-wrap:anywhere;font-size:17px;line-height:1.6}
+.mrow.me{justify-content:flex-end}.mrow.me .m{background:var(--mine)}
+.qr{display:flex;gap:6px;overflow-x:auto;padding:6px 18px}
+.qr button{flex:0 0 auto;border:1px solid var(--accent);color:var(--accent);background:var(--phone);border-radius:999px;padding:2px 12px;font-size:15px}
+.input{display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--line)}
+.input input{flex:1;min-width:0;font:inherit;font-size:17px;border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--soft);color:var(--ink)}
+.input button{border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:6px 16px;font-family:var(--font-head)}
+.tl{display:flex;gap:10px;overflow-x:auto;padding:4px 0}
+.tl div{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;font-size:14px;color:var(--muted)}
+.tl i{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);display:block}
+.up{color:var(--green);font-weight:500}.down{color:var(--warn);font-weight:500}
+.alert{background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:12px 14px;font-family:var(--font-head);font-weight:500;line-height:1.6}
+.alert .n{font-size:30px;user-select:all}
+.kap{display:grid;grid-template-columns:28px 1fr 1fr;gap:6px 10px;align-items:center;font-size:15px}
+.kap .bar2{height:10px;border-radius:5px;background:var(--line);overflow:hidden}.kap .bar2 b{display:block;height:100%;background:var(--accent)}
+.kap .bar2.now b{background:var(--green)}
+.mascot{width:96px;height:auto;align-self:center}
+.panel{background:var(--phone);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.state{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:4px 14px;font-size:16px}
+.state dt{color:var(--muted);font-family:var(--font-head)} .state dd{margin:0}
+.state dd.changed{background:var(--hl);border-radius:6px;padding:0 6px}
+.wtabs{display:flex;flex-wrap:wrap;gap:6px}
+.steps{display:flex;flex-direction:column;gap:6px}
+.steps button{text-align:left;border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:6px 12px;font-size:16px;line-height:1.5}
+.steps button.next{border-color:var(--accent);background:var(--phone);font-weight:500}
+.steps button.did{opacity:.6}
+.badge{font-family:var(--font-head);font-size:14px;padding:1px 10px;border-radius:999px;background:var(--ai-bg);color:var(--ai);white-space:nowrap;align-self:flex-start}
+.badge.rule{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:17px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-head);font-weight:500;color:var(--muted)}
+.kpi{font-family:var(--font-head);font-size:30px;font-weight:600}
+.ok{color:var(--green)} .no{color:var(--warn)}
+.note{border-left:4px solid var(--ai);background:var(--ai-bg);padding:8px 12px;font-size:16px}
+input[type=range]{width:100%}
+footer{max-width:90ch;font-size:15px;color:var(--muted)}
+@media (max-width:440px){.phone{height:auto;min-height:720px;border-radius:20px}}
+</style>
+
+<div class="page">
+  <div class="top">
+    <div>
+      <span class="proto" id="protoTag"></span>
+      <h1 id="title"></h1>
+      <p class="q" id="question"></p>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button class="chip" data-lang="th">ไทย</button><button class="chip" data-lang="en">English</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="phone" id="phone">
+      <div class="bar"><span id="appName"></span><span id="who"></span></div>
+      <div class="view" id="view"></div>
+      <div id="chatInput" hidden></div>
+      <nav class="tabs" id="tabs"></nav>
+    </div>
+
+    <section class="panel" aria-labelledby="labH">
+      <h2 id="labH"></h2>
+      <div><b id="pickL" class="small"></b><div class="wtabs" id="pick"></div></div>
+      <h3 id="stateH"></h3>
+      <dl class="state" id="state"></dl>
+      <h3 id="walkH"></h3>
+      <div class="wtabs" id="wtabs" role="tablist"></div>
+      <p class="small" id="wdesc"></p>
+      <div class="steps" id="wsteps"></div>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="juryH">
+    <h2 id="juryH"></h2>
+    <div class="map" id="map"></div>
+    <h3 id="testH"></h3>
+    <div class="tw"><table id="cm"></table></div>
+    <div class="map" id="kpis"></div>
+    <h3 id="prevH"></h3>
+    <p class="small" id="prevP"></p>
+    <input type="range" id="prev" min="1" max="30" value="20" aria-describedby="prevOut">
+    <p id="prevOut" aria-live="polite"></p>
+    <p class="note" id="simNote"></p>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+/* ============ PURE LOGIC MODULE (no DOM): lift this into the real app ============ */
+const SSIME=(()=>{
+  const LEVELS=["white","lgreen","dgreen","yellow","orange","red","black"];
+  // Ping-pong 7 colours (พรหมศวร et al., 2568, citing Wanchai et al., 2566). Lower bounds inclusive (team rule).
+  function bpLevel(s,d,dx){if(s>=180||d>=110)return 5;if(s>=160||d>=100)return 4;if(s>=140||d>=90)return 3;if(dx)return 2;if(s>=120||d>=80)return 1;return 0}
+  function sugarLevel(g,dx){if(g>=183)return 5;if(g>=155)return 4;if(g>=126)return 3;if(dx)return 2;if(g>=100)return 1;return 0}
+  // Simulated AI: fixed outputs per demo sample. Not a model.
+  const SIM={face:{normal:{abnormal:false,score:0.07},droop:{abnormal:true,score:0.82}},speech:{clear:{abnormal:false,score:0.06},slurred:{abnormal:true,score:0.87}}};
+  function befast(b){const flags=[];
+    if(b.face&&SIM.face[b.face].abnormal)flags.push("F");
+    if(b.speech&&SIM.speech[b.speech].abnormal)flags.push("S");
+    ["B","E","A"].forEach(k=>{if(b[k])flags.push(k)});
+    return{positive:flags.length>0,flags}}
+  // Thai CV Risk Score: Ramathibodi calculator (formular.js, 2021-04-23). Only ages 35-70 without prior CVD.
+  function cvRisk(x){if(x.age<35||x.age>70)return null;const S=0.964588,dm=x.dmdx?1:0,sm=x.smoke?1:0;let f;
+    if(x.tc>0){f=0.08183*x.age+0.39499*x.sex+0.02084*x.sbp+0.69974*dm+0.00212*x.tc+0.41916*sm;return 1-Math.pow(S,Math.exp(f-7.04423))}
+    f=0.079*x.age+0.128*x.sex+0.019350987*x.sbp+0.58454*dm+3.512566*(x.waist/x.height)+0.459*sm;return 1-Math.pow(S,Math.exp(f-7.712325))}
+  // Order of use: 1 BEFAST -> 2 colour -> 3 CV risk. BEFAST positive = black, nothing else computed.
+  function assess(profile,bf,visit){const B=befast(bf||{});
+    if(B.positive)return{level:6,befast:B,reason:{type:"befast",flags:B.flags},cv:null,cvNote:"stroke",cvHigh:false};
+    const x={...profile,...visit},b=bpLevel(x.sbp,x.dbp,x.htdx),g=sugarLevel(x.fbs,x.dmdx),cv=cvRisk(x);
+    return{level:Math.max(b,g),befast:B,reason:{type:b>=g?"bp":"sugar",b,g,x},cv,cvNote:cv==null?"age":null,cvHigh:cv!=null&&cv>=0.2}}
+  const RANGES={sbp:[70,260],dbp:[40,160],fbs:[40,500],age:[15,100],height:[100,220],waist:[40,200]};
+  function validate(k,v){const r=RANGES[k];return Number.isFinite(v)&&v>=r[0]&&v<=r[1]}
+  const MISSIONS=["salt","sweet","oil","smoke","alcohol","weight","med","walk"];
+  function ruleMissions(x){const m=[];
+    if(x.sbp>=120||x.dbp>=80)m.push("salt");
+    if(x.fbs>=100||x.dmdx)m.push("sweet");
+    if(x.smoke)m.push("smoke");
+    if(x.waist/x.height>=0.5)m.push("weight");
+    if(x.htdx||x.dmdx)m.push("med");
+    m.push("oil","walk");
+    return[...new Set(m)].slice(0,3)}
+  function kapScore(a){const s=k=>((a[k+"1"]?1:0)+(a[k+"2"]?1:0))*50;return{K:s("K"),A:s("A"),P:s("P")}}
+  // Base rate: precision of a test with fixed sensitivity/specificity at a given prevalence
+  function precisionAt(sens,spec,prev){const tp=sens*prev,fp=(1-spec)*(1-prev);return tp/(tp+fp)}
+  return{LEVELS,SIM,befast,cvRisk,assess,validate,RANGES,MISSIONS,ruleMissions,kapScore,precisionAt}
+})();
+
+/* ============ DEMO DATA (synthetic patients only) ============ */
+const PATIENTS={
+ buaphan:{th:"ป้าบัวผัน",en:"Auntie Buaphan",p:{age:58,sex:0,waist:85,height:155,tc:210,htdx:1,dmdx:0},
+   v:[{sbp:168,dbp:100,fbs:99,smoke:0},{sbp:158,dbp:96,fbs:97,smoke:0},{sbp:152,dbp:94,fbs:98,smoke:0}],kap:{pre:{K:50,A:50,P:0},m3:{K:100,A:100,P:50}}},
+ thongdee:{th:"ลุงทองดี",en:"Uncle Thongdee",p:{age:64,sex:1,waist:96,height:165,tc:0,htdx:1,dmdx:1},
+   v:[{sbp:184,dbp:104,fbs:190,smoke:1},{sbp:172,dbp:100,fbs:176,smoke:1},{sbp:158,dbp:92,fbs:140,smoke:0}],kap:{pre:{K:0,A:50,P:0},m3:{K:50,A:100,P:50}}},
+ ek:{th:"คุณเอก",en:"Khun Ek",p:{age:42,sex:1,waist:95,height:172,tc:0,htdx:0,dmdx:0},
+   v:[{sbp:124,dbp:80,fbs:98,smoke:1},{sbp:128,dbp:84,fbs:104,smoke:1},{sbp:134,dbp:86,fbs:108,smoke:1}],kap:{pre:{K:50,A:0,P:0},m3:{K:50,A:50,P:0}}},
+ somsri:{th:"ป้าสมศรี",en:"Auntie Somsri",p:{age:67,sex:0,waist:90,height:152,tc:0,htdx:1,dmdx:1},
+   v:[{sbp:146,dbp:90,fbs:150,smoke:0},{sbp:150,dbp:92,fbs:148,smoke:0},{sbp:144,dbp:88,fbs:138,smoke:0}],kap:{pre:{K:50,A:50,P:50},m3:{K:100,A:50,P:50}}},
+ nid:{th:"คุณนิด",en:"Khun Nid",isNew:true,p:null,v:[],kap:null},
+ boy:{th:"คุณบอย",en:"Khun Boy",isNew:true,p:null,v:[],kap:null}};
+const MONTHS={th:["ก.ค.","ส.ค.","ก.ย.","ต.ค."],en:["Jul","Aug","Sep","Oct"]};
+
+/* ============ TEXT (TH / EN) ============ */
+const COL={th:[
+ {n:"ขาว",m:"ปกติ",a:"ดูแลตัวเองต่อ ตรวจสุขภาพปีละครั้ง",next:"ในอีก 1 ปี"},
+ {n:"เขียวอ่อน",m:"เริ่มเสี่ยง",a:"เริ่มภารกิจ 3R3E เพื่อกลับไปเป็นสีขาว",next:"ในอีก 3 เดือน"},
+ {n:"เขียวเข้ม",m:"ป่วยแต่คุมได้ดี",a:"ทำภารกิจต่อ และกินยาตามแพทย์สั่ง",next:"ในอีก 3 เดือน"},
+ {n:"เหลือง",m:"เฝ้าระวัง",a:"ทำภารกิจให้เข้มข้นขึ้น แล้ววัดซ้ำเร็ว ๆ",next:"ในอีก 2 สัปดาห์"},
+ {n:"ส้ม",m:"อันตราย",a:"ไปพบแพทย์ที่ รพ.สต. หรือโรงพยาบาล",next:"ภายใน 1 สัปดาห์ กับแพทย์"},
+ {n:"แดง",m:"วิกฤต",a:"ไปโรงพยาบาลวันนี้",next:"วันนี้ ที่โรงพยาบาล"},
+ {n:"ดำ",m:"สัญญาณ stroke",a:"โทร 1669 และไปถึงโรงพยาบาลภายใน 4.5 ชั่วโมงนับจากเริ่มมีอาการ",next:"ตอนนี้ ที่โรงพยาบาล"}],
+en:[
+ {n:"White",m:"Normal",a:"Keep it up. Check once a year",next:"in 1 year"},
+ {n:"Light green",m:"At risk",a:"Start 3R3E missions to get back to white",next:"in 3 months"},
+ {n:"Dark green",m:"Ill, well controlled",a:"Keep up the missions and take medicine as prescribed",next:"in 3 months"},
+ {n:"Yellow",m:"Watch",a:"Step up the missions and re-measure soon",next:"in 2 weeks"},
+ {n:"Orange",m:"Danger",a:"See a doctor at the health station or hospital",next:"within 1 week, with a doctor"},
+ {n:"Red",m:"Critical",a:"Go to hospital today",next:"today, at hospital"},
+ {n:"Black",m:"Stroke warning",a:"Call 1669 and reach hospital within 4.5 hours of symptom onset",next:"now, at hospital"}]};
+const HEX=["#FBFBF8","#A8D98A","#2E7D32","#F2C94C","#EE8A2E","#C62828","#1B1B1B"];
+const MIS={th:{salt:"ลดเค็ม: ชิมก่อนเติมน้ำปลา",sweet:"ลดหวาน: สั่ง \"หวานน้อย\"",oil:"ลดมัน: เลือกต้ม นึ่ง ย่าง แทนทอด",smoke:"ลดบุหรี่: วันนี้สูบน้อยกว่าเมื่อวาน 1 มวน",alcohol:"ลดเหล้า: งดดื่มในวันธรรมดา",weight:"ลดอ้วน: เดินหลังอาหาร 15 นาที",med:"กินยาตามแพทย์สั่ง ครบทุกมื้อ",walk:"ขยับ: เดินเร็ววันละ 30 นาที"},
+ en:{salt:"Less salt: taste before adding fish sauce",sweet:"Less sugar: order \"less sweet\"",oil:"Less fat: boil, steam or grill instead of frying",smoke:"Less smoking: one cigarette fewer than yesterday",alcohol:"Less alcohol: no drinks on weekdays",weight:"Less weight: walk 15 minutes after meals",med:"Take your medicine as prescribed, every dose",walk:"Move: brisk walk 30 minutes a day"}};
+const MTAG={salt:"R",sweet:"R",oil:"R",smoke:"E",alcohol:"E",weight:"E",med:"Rx",walk:"E"};
+const KAPQ={th:{K1:"หน้าเบี้ยว พูดไม่ชัด ต้องโทร 1669 ทันที",K2:"เกลือไม่ควรเกินวันละ 1 ช้อนชา",A1:"ฉันเชื่อว่าการลดเค็มช่วยลดความเสี่ยง stroke",A2:"การกินยาทุกวันสำคัญ แม้ไม่มีอาการ",P1:"สัปดาห์นี้ฉันกินยาครบทุกวัน",P2:"สัปดาห์นี้ฉันออกกำลังกายอย่างน้อย 3 วัน"},
+ en:{K1:"A drooping face or slurred speech means calling 1669 at once",K2:"Salt should stay under 1 teaspoon a day",A1:"I believe less salt lowers my stroke risk",A2:"Taking medicine daily matters even without symptoms",P1:"This week I took my medicine every day",P2:"This week I exercised on at least 3 days"}};
+const HB=[
+ {id:"H1",th:"[3R ลดหวาน] น้ำตาลไม่เกินวันละ 6 ช้อนชา เลี่ยงน้ำหวาน ชานม น้ำอัดลม สั่ง \"หวานน้อย\"",en:"[3R less sugar] No more than 6 teaspoons of sugar a day. Avoid sweet drinks, milk tea and soda; order \"less sweet\"."},
+ {id:"H2",th:"[3R ลดมัน] น้ำมันไม่เกินวันละ 6 ช้อนชา เลือกต้ม นึ่ง ย่าง แทนทอด เลี่ยงหนังสัตว์และกะทิ",en:"[3R less fat] No more than 6 teaspoons of oil a day. Boil, steam or grill instead of frying; avoid animal skin and coconut milk."},
+ {id:"H3",th:"[3R ลดเค็ม] เกลือไม่เกินวันละ 1 ช้อนชา (โซเดียมไม่เกิน 2,000 มก.) ชิมก่อนเติม ลดน้ำปลา ซอส อาหารแปรรูป",en:"[3R less salt] No more than 1 teaspoon of salt a day (sodium under 2,000 mg). Taste before adding; cut fish sauce, sauces and processed food."},
+ {id:"H4",th:"[3E ลดบุหรี่] เลิกบุหรี่ลดความเสี่ยงหลอดเลือดสมอง ปรึกษาสายเลิกบุหรี่ 1600 หรือ รพ.สต.",en:"[3E less smoking] Quitting lowers stroke risk. Call the quitline 1600 or ask the health station."},
+ {id:"H5",th:"[3E ลดเหล้า] งดหรือลดเครื่องดื่มแอลกอฮอล์ เพราะทำให้ความดันสูงขึ้น",en:"[3E less alcohol] Stop or cut alcohol; it raises blood pressure."},
+ {id:"H6",th:"[3E ลดอ้วน] รอบเอวควรน้อยกว่าครึ่งหนึ่งของส่วนสูง ค่อย ๆ ลดน้ำหนักร่วมกับลดหวาน มัน เค็ม",en:"[3E less weight] Keep your waist under half your height. Lose weight slowly, together with less sugar, fat and salt."},
+ {id:"H7",th:"[ยา] กินยาความดันและเบาหวานตามแพทย์สั่งทุกวัน ห้ามหยุดหรือปรับยาเอง ถ้าลืมบ่อยให้ตั้งนาฬิกาปลุกหรือปรึกษา รพ.สต.",en:"[Medicine] Take blood-pressure and diabetes medicine daily as prescribed. Never stop or change it yourself; set an alarm if you forget."},
+ {id:"H8",th:"[ปิงปอง 7 สี] ขาว=ปกติ เขียวอ่อน=เสี่ยง เขียวเข้ม=ป่วยคุมได้ เหลือง=เฝ้าระวัง ส้ม=อันตราย พบแพทย์ แดง=วิกฤต ไปโรงพยาบาลวันนี้ ดำ=สัญญาณ stroke ไปโรงพยาบาลภายใน 4.5 ชั่วโมง",en:"[7 colours] White=normal, light green=at risk, dark green=ill but controlled, yellow=watch, orange=danger, see a doctor, red=critical, hospital today, black=stroke warning, hospital within 4.5 hours."},
+ {id:"H9",th:"[BEFAST] B เดินเซ E ตามัว F หน้าเบี้ยว A แขนขาอ่อนแรงข้างเดียว S พูดไม่ชัด T จดเวลาที่เริ่มมีอาการ ถ้ามีข้อใดข้อหนึ่งโทร 1669 ทันที",en:"[BEFAST] B balance lost, E blurred vision, F face drooping, A one arm or leg weak, S slurred speech, T note the time it started. Any one sign: call 1669 now."},
+ {id:"H10",th:"[Golden period] ยาละลายลิ่มเลือดได้ผลดีที่สุดถ้าได้รับภายใน 4.5 ชั่วโมงนับจากเริ่มมีอาการ อย่ารอให้หายเอง อย่าขับรถเอง โทร 1669",en:"[Golden period] Clot-busting treatment works best within 4.5 hours of symptom onset. Don't wait for it to pass and don't drive yourself: call 1669."},
+ {id:"H11",th:"[ป้องกัน stroke ซ้ำ] คุมความดันและน้ำตาล กินยาต่อเนื่อง เลิกบุหรี่ และกลับมาวัดสีตามนัด",en:"[Preventing another stroke] Control blood pressure and sugar, keep taking medicine, quit smoking, and come back to measure your colour on time."}];
+const T={th:{
+ proto:"ต้นแบบ v3 · ทิ้งได้ · ผู้ป่วยสมมติทั้งหมด",title:"SSIME PBRI Model · ต้นแบบ v3",
+ question:"คำถามที่ต้นแบบนี้ตอบ: ลำดับ ① BEFAST → ② ปิงปอง 7 สี → ③ CV Risk ให้สีและสิ่งที่ต้องทำถูกต้องกับผู้ป่วยแต่ละแบบไหม รวมถึงกรณีที่ยาก เช่น BEFAST ผิดปกติ สีดูดีแต่ CV Risk สูง และความดันกับน้ำตาลให้สีไม่ตรงกัน",
+ app:"สมุดปิงปอง",tabs:["หน้าแรก","ภารกิจ","น้องปิงปอง","สีของฉัน"],hello:"สวัสดี",synthetic:"(สมมติ)",
+ measure:"วัดค่าวันนี้",mToday:"ภารกิจวันนี้",sos:"มีอาการผิดปกติตอนนี้",nextVisit:"ตรวจครั้งต่อไป",colour:"สี",
+ step:"ขั้นที่",of:"จาก",s1:"① เช็ก BEFAST ก่อน",faceQ:"F · ถ่ายหน้าตรง (เลือกรูปตัวอย่าง)",faceN:"หน้าปกติ",faceD:"มุมปากตกข้างหนึ่ง",
+ simTag:"AI จำลอง · สาธิตเท่านั้น",faceOk:"AI: ใบหน้าสมมาตร",faceBad:"AI: ใบหน้าไม่สมมาตร",conf:"ความมั่นใจ",
+ speechQ:"S · อ่านประโยคนี้ออกเสียง",sentence:"\"ยายพาหลานไปตลาดตอนเช้า\"",spC:"ตัวอย่าง: พูดชัด",spS:"ตัวอย่าง: พูดไม่ชัด",spOk:"AI: พูดชัด",spBad:"AI: พบการพูดไม่ชัด",
+ beaQ:"ตอบเอง: ตอนนี้มีอาการเหล่านี้ไหม",B:"B เดินเซ เสียการทรงตัว",E:"E ตามัว มองเห็นภาพซ้อน",A:"A แขนหรือขาอ่อนแรงข้างเดียว",Tn:"T = Time ถ้ามีอาการ จดเวลาที่เริ่มเป็น",
+ yes:"ใช่",no:"ไม่",next:"ต่อ",back:"ย้อนกลับ",cancel:"ยกเลิก",del:"ลบ",
+ sbp:"② ความดันตัวบน",dbp:"② ความดันตัวล่าง",fbs:"② น้ำตาลปลายนิ้ว (เช้า ก่อนกินข้าว)",mmhg:"มม.ปรอท",mgdl:"มก./ดล.",
+ enterFirst:"ใส่ตัวเลขก่อนกดต่อ",range:"ตัวเลขควรอยู่ระหว่าง",tryAgain:"ลองตรวจอีกครั้ง",
+ ynQ:"ตอบใช่หรือไม่",smoke:"ตอนนี้สูบบุหรี่",htdx:"หมอเคยบอกว่าเป็นความดันสูง",dmdx:"หมอเคยบอกว่าเป็นเบาหวาน",see:"ดูสีของฉัน",
+ today:"ผลวันนี้",better:"ดีขึ้น {n} ระดับจากครั้งก่อน",worse:"แย่ลง {n} ระดับจากครั้งก่อน",same:"เท่ากับครั้งก่อน",
+ whyH:"ทำไมได้สีนี้",doH:"ทำอะไรต่อ",bpIs:"ความดัน {s}/{d} อยู่ในช่วงสี{c}",sugarIs:"น้ำตาล {g} อยู่ในช่วงสี{c}",otherBetter:"ส่วนอีกค่าดีกว่า เราใช้สีที่แย่กว่า",
+ cvH:"③ ความเสี่ยงโรคหลอดเลือดสมองและหัวใจใน 10 ปี",cvTxt:"คนแบบคุณ 100 คน จะเป็นโรคประมาณ {n} คน",cvIf:"ถ้าความดันลดลง 20{s} จะเหลือประมาณ {n} คน",quit:" และเลิกบุหรี่",
+ cvHigh:"ความเสี่ยงสูง ปรึกษา รพ.สต. (สีไม่เปลี่ยน)",cvOver:"ตัวเลขนี้อาจสูงกว่าความจริง (การศึกษาในภาคใต้พบว่าสูตรให้ค่าสูงเกินในกลุ่มเสี่ยงกลางถึงสูง)",
+ cvAge:"ใช้สูตรนี้ไม่ได้ (อายุนอกช่วง 35–70 ปี)",cvStroke:"ไม่คำนวณ: มีสัญญาณ stroke และสูตรนี้ใช้กับคนที่ยังไม่เป็นโรคหัวใจและหลอดเลือดเท่านั้น",
+ more30:"มากกว่า 30",save:"บันทึก",
+ blackH:"สีดำ · สัญญาณ stroke",call:"โทร",now:"ทันที",golden:"ไปถึงโรงพยาบาลภายใน 4.5 ชั่วโมงนับจากเริ่มมีอาการ (golden period) อย่าขับรถเอง",onset:"เวลาที่บันทึกอาการ",skipped:"ข้ามการกรอกค่าตรวจและ CV Risk เพราะต้องไปโรงพยาบาลก่อน",
+ found:"พบ",misH:"ภารกิจ 3R3E ของ{p}",misSub:"เลือกจากค่าตรวจล่าสุด ทำครบ 7 วันแล้วค่อยวัดซ้ำ",done:"ทำแล้ววันนี้",doneOk:"ทำแล้ว ✓",
+ aiPick:"ให้น้องปิงปองเลือกภารกิจให้ (AI-Learning)",aiPicking:"น้องปิงปองกำลังเลือก…",byRule:"เลือกตามกฎจากค่าตรวจ",byAI:"AI เลือกจากคำถามในแชตและค่าตรวจ",aiFallback:"เชื่อม AI ไม่ได้ ใช้กฎแทน",
+ askBot:"ถามน้องปิงปองเรื่องภารกิจ",greet:"สวัสดีค่ะ น้องปิงปองเองค่ะ ถามเรื่องลดหวาน มัน เค็ม บุหรี่ เหล้า อ้วน สีปิงปอง หรืออาการ stroke ได้เลย",
+ qr:["อาการ stroke มีอะไรบ้าง","golden period คืออะไร","กินเค็มได้วันละเท่าไร","สีของฉันแปลว่าอะไร","กินสมุนไพรแทนยาได้ไหม"],
+ ph:"พิมพ์คำถาม",send:"ส่ง",offline:"โหมดบทตอบสำรอง (ไม่ได้เชื่อม AI)",typeFirst:"พิมพ์คำถามก่อนกดส่ง",notInBook:"เรื่องนี้ไม่อยู่ในคู่มือ แนะนำให้ปรึกษาเจ้าหน้าที่ รพ.สต.",
+ histH:"เส้นทางสีของฉัน",from:"จากสี{a} เป็นสี{b} ใน {n} ครั้งที่ตรวจ",lvUp:"ดีขึ้น {n} ระดับ",lvDown:"แย่ลง {n} ระดับ",lvSame:"สีเท่าเดิม",risk10:"ความเสี่ยง 10 ปี",per100:"{a} → {b} คนใน 100 คน",
+ kapH:"KAP: ก่อนเริ่ม เทียบกับ 3 เดือน",kapPre:"ก่อนเริ่ม",kap3:"3 เดือน",kapNow:"วันนี้",kapTake:"ทำแบบสอบถาม KAP (6 ข้อ)",kapSample:"ข้อคำถามตัวอย่าง ยังไม่ผ่านการตรวจความตรง",kapDone:"บันทึกคำตอบ",again:"↻ วัดซ้ำ",todayL:"วันนี้",
+ consentH:"ยินดีต้อนรับสู่สมุดปิงปอง",consentTxt:"แอปจะเก็บอายุ เพศ ส่วนสูง รอบเอว โรคประจำตัว การสูบบุหรี่ และค่าตรวจที่คุณกรอก เพื่อบอกสีปิงปอง ความเสี่ยง และภารกิจของคุณ ข้อมูลใช้ในการดูแลของ รพ.สต. เท่านั้น และคุณขอให้ลบได้ทุกเมื่อ",consentDemo:"ในเดโมนี้ไม่มีการบันทึกข้อมูลจริง",agree:"ยินยอมและเริ่มใช้",
+ profH:"ข้อมูลของฉัน",age:"อายุ",height:"ส่วนสูง",waist:"รอบเอว (วัดผ่านสะดือ)",yrs:"ปี",cm:"ซม.",sexQ:"เพศ",male:"ชาย",female:"หญิง",profDone:"บันทึกข้อมูล",
+ kapPreH:"แบบสอบถามก่อนเริ่ม (KAP pretest)",kapPreSub:"ใช้เป็นค่าตั้งต้น เพื่อเทียบที่ 3, 6 และ 12 เดือน",skip:"ข้ามไปก่อน",
+ noColour:"ยังไม่มีสี",noColourSub:"วัดค่าครั้งแรกเพื่อรู้สีปิงปองของคุณ",firstMeasure:"วัดค่าครั้งแรก",finishSignup:"ลงทะเบียนให้เสร็จ",baseline:"นี่คือสีตั้งต้นของคุณ ครั้งหน้าจะเทียบกับสีนี้",
+ noVisits:"ยังไม่ได้ตรวจ วัดค่าครั้งแรกเพื่อเริ่มเส้นทางสี",noKapBase:"ยังไม่มีค่าตั้งต้น KAP ทำแบบสอบถามตอนนี้ เพื่อวัดผลที่ 3·6·12 เดือนได้",
+ labH:"ห้องทดลองตรรกะ (สำหรับทีม)",pickL:"ผู้ป่วยสมมติ (กดเพื่อเริ่มใหม่):",stateH:"สถานะตอนนี้",walkH:"สถานการณ์ทดสอบ",
+ st:{profile:"ข้อมูลส่วนตัว",kapPre:"KAP ก่อนเริ่ม",patient:"ผู้ป่วย",screen:"หน้าจอ",bf:"BEFAST",bfRes:"ผล BEFAST",vals:"ค่าที่กรอก",level:"สีที่ได้",reason:"เหตุผล",cv:"CV Risk",missions:"ภารกิจ",last:"การกระทำล่าสุด"},
+ none:"ยังไม่มี",positive:"ผิดปกติ",negative:"ปกติ",notyet:"ยังไม่ประเมิน",
+ juryH:"สำหรับกรรมการ: AI อยู่ตรงไหน",testH:"BEFAST AI บนชุดทดสอบจำลอง 100 ราย",pred:"AI ทำนาย",actual:"ความจริง",strokeY:"เป็น stroke",strokeN:"ไม่เป็น",
+ prec:"Precision",sens:"Sensitivity",spec:"Specificity",target:"เป้า KPI",met:"ผ่านเป้า",notMet:"ไม่ผ่านเป้า",
+ prevH:"ถ้าใช้ในชุมชน ความชุกต่ำลง Precision จะเป็นเท่าไร",prevP:"ใช้ Sensitivity และ Specificity ชุดเดียวกัน เลื่อนเพื่อเปลี่ยนสัดส่วนคนที่เป็น stroke จริงในกลุ่มที่ตรวจ",
+ prevOut:"ความชุก {p}% → Precision {q}% ({ok})",
+ simNote:"ตัวเลขทั้งหมดในแผงนี้เป็นการจำลองเพื่อแสดงวิธีวัด KPI ยังไม่มีโมเดลจริงและไม่มีข้อมูลผู้ป่วยจริง เป้า Precision 50% ต้องระบุว่าเทียบกับการวินิจฉัยของแพทย์หรือผล CT",
+ map:[["① Screening · ส่วนที่ 1","BEFAST Detection: ดูใบหน้าและฟังเสียง (จำลอง)","AI"],["② ③ Screening · ส่วนที่ 2","ปิงปอง 7 สี และ Thai CV Risk Score คำนวณด้วยกฎ ต้องตรงกับพยาบาล 100%","กฎ"],["Intervention","น้องปิงปองตอบจากคู่มือ 11 หัวข้อ และ AI-Learning เลือกภารกิจ 3R3E","AI"],["Monitoring & Evaluation","เส้นทางสี CV Risk ก่อนและหลัง และ KAP ที่ 3·6·12 เดือน","กฎ"]],
+ foot:"ต้นแบบนี้ใช้ข้อมูลผู้ป่วยสมมติทั้งหมด เพื่อการสาธิต ไม่ใช่คำแนะนำทางการแพทย์ · เกณฑ์ 7 สี: พรหมศวร และคณะ (2568) อ้างอัศนี วันชัย และคณะ (2566) · สีดำในโครงการนี้หมายถึงสัญญาณ stroke เท่านั้น · สูตร Thai CV Risk Score: เครื่องคำนวณของโรงพยาบาลรามาธิบดี (formular.js 2021-04-23) · การกระทำตามสี ระยะนัด ภารกิจ คู่มือ และแบบสอบถาม KAP เป็นร่างของ SSIME PBRI Model Team · ภาพน้องปิงปอง: SSIME PBRI Model Team"},
+en:{
+ proto:"Prototype v3 · throwaway · fictional patients only",title:"SSIME PBRI Model · Prototype v3",
+ question:"The question this prototype answers: does the order ① BEFAST → ② 7-colour ping-pong → ③ CV Risk give each person the right colour and next step, including the hard cases: BEFAST abnormal, a good colour with high CV Risk, and blood pressure and sugar pointing to different colours?",
+ app:"Ping-pong booklet",tabs:["Home","Missions","Nong Ping-Pong","My colours"],hello:"Hello",synthetic:"(fictional)",
+ measure:"Measure today",mToday:"Today's missions",sos:"Something feels wrong now",nextVisit:"Next check",colour:"",
+ step:"Step",of:"of",s1:"① BEFAST check first",faceQ:"F · Front-facing photo (pick a sample)",faceN:"Normal face",faceD:"One mouth corner drooping",
+ simTag:"Simulated AI · demo only",faceOk:"AI: face symmetric",faceBad:"AI: face asymmetric",conf:"confidence",
+ speechQ:"S · Read this sentence aloud",sentence:"\"Today the weather is nice and warm\"",spC:"Sample: clear speech",spS:"Sample: slurred speech",spOk:"AI: speech clear",spBad:"AI: slurred speech detected",
+ beaQ:"Your own answers: do you have any of these now?",B:"B Losing balance",E:"E Blurred or double vision",A:"A One arm or leg weak",Tn:"T = Time: if you have symptoms, note when they started",
+ yes:"Yes",no:"No",next:"Next",back:"Back",cancel:"Cancel",del:"Del",
+ sbp:"② Upper blood pressure",dbp:"② Lower blood pressure",fbs:"② Finger-prick sugar (morning, before eating)",mmhg:"mmHg",mgdl:"mg/dL",
+ enterFirst:"Enter a number first",range:"The number should be between",tryAgain:"please check again",
+ ynQ:"Answer yes or no",smoke:"I smoke now",htdx:"A doctor said I have high blood pressure",dmdx:"A doctor said I have diabetes",see:"See my colour",
+ today:"Today's result",better:"{n} level(s) better than last time",worse:"{n} level(s) worse than last time",same:"Same as last time",
+ whyH:"Why this colour",doH:"What to do next",bpIs:"Blood pressure {s}/{d} is in the {c} range",sugarIs:"Sugar {g} is in the {c} range",otherBetter:"The other value is better; we use the worse colour",
+ cvH:"③ 10-year risk of stroke and heart disease",cvTxt:"Of 100 people like you, about {n} will get the disease",cvIf:"If blood pressure drops by 20{s}, about {n}",quit:" and you quit smoking",
+ cvHigh:"High risk: talk to your health station (colour unchanged)",cvOver:"This figure may be higher than the real risk (a southern Thai study found the formula overestimates moderate and high risk)",
+ cvAge:"Formula not usable (age outside 35–70)",cvStroke:"Not calculated: stroke warning, and the formula is only for people without cardiovascular disease",
+ more30:"more than 30",save:"Save",
+ blackH:"Black · stroke warning",call:"Call",now:"now",golden:"Reach hospital within 4.5 hours of symptom onset (golden period). Don't drive yourself",onset:"Symptoms noted at",skipped:"Measurements and CV Risk skipped: hospital comes first",
+ found:"Found",misH:"{p}'s 3R3E missions",misSub:"Picked from your latest results. Do them for 7 days, then re-measure",done:"Done today",doneOk:"Done ✓",
+ aiPick:"Let Nong Ping-Pong pick my missions (AI-Learning)",aiPicking:"Nong Ping-Pong is choosing…",byRule:"Picked by rules from your results",byAI:"AI picked from your chat questions and results",aiFallback:"AI unavailable, rules used instead",
+ askBot:"Ask Nong Ping-Pong about missions",greet:"Hi, I'm Nong Ping-Pong! Ask me about less sugar, fat or salt, smoking, alcohol, weight, your ping-pong colour, or stroke signs.",
+ qr:["What are the signs of stroke?","What is the golden period?","How much salt a day?","What does my colour mean?","Can herbs replace my medicine?"],
+ ph:"Type a question",send:"Send",offline:"Backup answers (AI not connected)",typeFirst:"Type a question first",notInBook:"That's not in my handbook. Please ask the staff at your health station.",
+ histH:"My colour journey",from:"From {a} to {b} over {n} checks",lvUp:"{n} level(s) better",lvDown:"{n} level(s) worse",lvSame:"Same colour",risk10:"10-year risk",per100:"{a} → {b} in 100 people",
+ kapH:"KAP: before vs 3 months",kapPre:"Before",kap3:"3 months",kapNow:"Today",kapTake:"Take the KAP check (6 items)",kapSample:"Sample items, not yet validated",kapDone:"Save answers",again:"↻ Measure again",todayL:"Today",
+ consentH:"Welcome to your ping-pong booklet",consentTxt:"The app keeps your age, sex, height, waist, diagnoses, smoking and the readings you enter, to show your ping-pong colour, your risk and your missions. Only your health station uses it, and you can ask for it to be deleted at any time.",consentDemo:"This demo stores no real data",agree:"I agree, let's start",
+ profH:"About me",age:"Age",height:"Height",waist:"Waist (measured at the navel)",yrs:"years",cm:"cm",sexQ:"Sex",male:"Male",female:"Female",profDone:"Save my details",
+ kapPreH:"Before you start (KAP pretest)",kapPreSub:"Your starting point, compared again at 3, 6 and 12 months",skip:"Skip for now",
+ noColour:"No colour yet",noColourSub:"Take your first reading to see your ping-pong colour",firstMeasure:"First reading",finishSignup:"Finish signing up",baseline:"This is your starting colour; next time we compare with it",
+ noVisits:"No checks yet. Take your first reading to start your colour journey",noKapBase:"No KAP starting point yet. Take the check now so 3·6·12-month results can be compared",
+ labH:"Logic lab (for the team)",pickL:"Fictional patients (click to restart):",stateH:"Current state",walkH:"Test scenarios",
+ st:{profile:"Profile",kapPre:"KAP pretest",patient:"Patient",screen:"Screen",bf:"BEFAST",bfRes:"BEFAST result",vals:"Values entered",level:"Colour",reason:"Reason",cv:"CV Risk",missions:"Missions",last:"Last action"},
+ none:"none yet",positive:"abnormal",negative:"normal",notyet:"not assessed yet",
+ juryH:"For the committee: where AI sits",testH:"BEFAST AI on a simulated test set of 100 cases",pred:"AI says",actual:"Truth",strokeY:"Stroke",strokeN:"No stroke",
+ prec:"Precision",sens:"Sensitivity",spec:"Specificity",target:"KPI target",met:"target met",notMet:"target missed",
+ prevH:"In the community, fewer people have a stroke: what happens to precision?",prevP:"Same sensitivity and specificity. Slide to change the share of people screened who truly have a stroke.",
+ prevOut:"Prevalence {p}% → precision {q}% ({ok})",
+ simNote:"Every number in this panel is simulated to show how the KPI is measured. There is no real model and no real patient data yet. The 50% precision target still needs a reference standard: a doctor's diagnosis or CT.",
+ map:[["① Screening · part 1","BEFAST Detection: reads the face and listens to speech (simulated)","AI"],["② ③ Screening · part 2","7-colour ping-pong and Thai CV Risk Score are rules; they must match a nurse 100%","Rules"],["Intervention","Nong Ping-Pong answers from an 11-topic handbook; AI-Learning picks 3R3E missions","AI"],["Monitoring & Evaluation","Colour journey, CV Risk before and after, KAP at 3·6·12 months","Rules"]],
+ foot:"Fictional patients only, for demonstration; not medical advice · 7-colour criteria: พรหมศวร et al. (2568 BE), citing อัศนี วันชัย et al. (2566 BE) · In this project black means stroke warning only · Thai CV Risk Score: Ramathibodi Hospital calculator (formular.js 2021-04-23) · Colour actions, follow-up intervals, missions, handbook and KAP items are drafts by the SSIME PBRI Model Team · Nong Ping-Pong artwork: SSIME PBRI Model Team"}};
+
+/* ============ STATE + REDUCER ============ */
+const DRAFT={sex:0,htdx:0,dmdx:0,smoke:0,tc:0};
+function initial(pid,lang){const hist={};Object.keys(PATIENTS).forEach(k=>{hist[k]=PATIENTS[k].v.map(v=>({visit:v,bf:{},level:SSIME.assess(PATIENTS[k].p,{},v).level}))});
+  pid=pid||"buaphan";
+  return{lang:lang||"th",pid,tab:"home",step:PATIENTS[pid].isNew?"consent":null,bf:{},visit:{},error:"",result:null,hist,done:{},picks:{},kap:{},kapPre:{},prof:{},draft:{...DRAFT},kapOpen:false,kapAns:{},onset:null,last:"—",changed:[]}}
+function lastVisit(s){const h=s.hist[s.pid];return h[h.length-1]}
+function profileOf(s){return s.prof[s.pid]||PATIENTS[s.pid].p}
+function reduce(s,a){const n={...s,error:"",changed:[]};const pr=profileOf(s)||{};
+  switch(a.type){
+  case"RESET":return{...initial(a.pid,s.lang),last:a.type,changed:["patient"]};
+  case"ONBOARD":return{...n,tab:"home",step:"consent",draft:{...DRAFT},last:a.type,changed:["screen"]};
+  case"CONSENT":return{...n,step:"age",last:a.type,changed:["screen"]};
+  case"PVALUE":{if(!SSIME.validate(a.k,a.v))return{...n,error:a.k,last:a.type+" "+a.k+"="+a.v+" ✗",changed:["profile"]};
+    const order=["age","height","waist","pyn"];return{...n,draft:{...s.draft,[a.k]:a.v},step:order[order.indexOf(a.k)+1],last:a.type+" "+a.k+"="+a.v,changed:["profile","screen"]}}
+  case"PANS":return{...n,draft:{...s.draft,[a.k]:a.v},last:a.type+" "+a.k+"="+a.v,changed:["profile"]};
+  case"PROFILE_DONE":return{...n,prof:{...s.prof,[s.pid]:{...s.draft}},step:"kappre",kapAns:{},last:a.type,changed:["profile","screen"]};
+  case"KAPPRE_SAVE":return{...n,kapPre:{...s.kapPre,[s.pid]:SSIME.kapScore(s.kapAns)},step:null,tab:"home",last:a.type,changed:["kapPre","screen"]};
+  case"KAPPRE_SKIP":return{...n,step:null,tab:"home",last:a.type,changed:["kapPre","screen"]};
+  case"LANG":return{...n,lang:a.v};
+  case"GO":return{...n,tab:a.v,step:null,kapOpen:false,last:a.type+" "+a.v,changed:["screen"]};
+  case"START":{if(!profileOf(s))return{...n,tab:"home",step:"consent",draft:{...DRAFT},last:a.type+" → onboarding",changed:["screen"]};
+    const lv=lastVisit(s);return{...n,tab:"home",step:"face",bf:{},visit:{smoke:lv?lv.visit.smoke:pr.smoke||0,htdx:pr.htdx,dmdx:pr.dmdx},result:null,onset:null,last:a.type,changed:["screen","bf","vals"]}}
+  case"FACE":return{...n,bf:{...s.bf,face:a.v},last:a.type+" "+a.v,changed:["bf"]};
+  case"SPEECH":return{...n,bf:{...s.bf,speech:a.v},last:a.type+" "+a.v,changed:["bf"]};
+  case"NEXT":return{...n,step:a.v,last:a.type+" → "+a.v,changed:["screen"]};
+  case"BEA":return{...n,bf:{...s.bf,[a.k]:a.v},last:a.type+" "+a.k+"="+(a.v?1:0),changed:["bf"]};
+  case"BEFAST_DONE":{const r=SSIME.assess(pr,s.bf,{});
+    if(r.befast.positive)return{...n,step:"black",result:r,onset:a.time,last:a.type+" → black",changed:["screen","bfRes","level","cv"]};
+    return{...n,step:"sbp",last:a.type+" → ②",changed:["screen","bfRes"]}}
+  case"VALUE":{if(!SSIME.validate(a.k,a.v))return{...n,error:a.k,last:a.type+" "+a.k+"="+a.v+" ✗",changed:["vals"]};
+    const order=["sbp","dbp","fbs","yn"];return{...n,visit:{...s.visit,[a.k]:a.v},step:order[order.indexOf(a.k)+1],last:a.type+" "+a.k+"="+a.v,changed:["vals","screen"]}}
+  case"ANSWER":return{...n,visit:{...s.visit,[a.k]:a.v},last:a.type+" "+a.k+"="+a.v,changed:["vals"]};
+  case"SEE":{const p2={...pr,htdx:s.visit.htdx,dmdx:s.visit.dmdx};const r=SSIME.assess(p2,s.bf,s.visit);
+    return{...n,step:"result",result:r,last:a.type,changed:["screen","level","reason","cv"]}}
+  case"SAVE":{const lv=lastVisit(s);const rec={visit:s.step==="black"?(lv?{...lv.visit}:{}):{...s.visit},bf:s.bf,level:s.result.level};
+    return{...n,hist:{...s.hist,[s.pid]:[...s.hist[s.pid],rec]},step:null,tab:"home",last:a.type,changed:["screen"]}}
+  case"BACK":return{...n,step:a.v,last:a.type,changed:["screen"]};
+  case"DONE":return{...n,done:{...s.done,[s.pid+a.k]:!s.done[s.pid+a.k]},last:a.type+" "+a.k};
+  case"PICKS":return{...n,picks:{...s.picks,[s.pid]:{keys:a.keys,why:a.why,src:a.src}},last:a.type+" ("+a.src+")",changed:["missions"]};
+  case"KAP_OPEN":return{...n,kapOpen:true,kapAns:{},last:a.type};
+  case"KAP_ANS":return{...n,kapAns:{...s.kapAns,[a.k]:a.v},last:a.type+" "+a.k};
+  case"KAP_SAVE":{const sc=SSIME.kapScore(s.kapAns),hasPre=PATIENTS[s.pid].kap||s.kapPre[s.pid];
+    return hasPre?{...n,kap:{...s.kap,[s.pid]:sc},kapOpen:false,last:a.type}:{...n,kapPre:{...s.kapPre,[s.pid]:sc},kapOpen:false,last:a.type+" → pretest",changed:["kapPre"]}}
+  default:return s}}
+
+/* ============ PAGE SHELL ============ */
+let S=initial();const $=id=>document.getElementById(id),V=$("view");
+let typed="",chatMsgs={},chatHist={},sample=null,busy=false,scenario=0,wstep=0;
+const t=k=>T[S.lang][k];
+const fmt=(str,o)=>str.replace(/\{(\w+)\}/g,(_,k)=>o[k]);
+const cname=l=>COL[S.lang][l].n;
+const per100=r=>r>0.3?t("more30"):Math.max(1,Math.round(r*100));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function dispatch(a){S=reduce(S,a);render()}
+const pname=pid=>PATIENTS[pid||S.pid][S.lang];
+const curX=()=>{const lv=lastVisit(S);return{...(profileOf(S)||DRAFT),...(lv?lv.visit:{})}};
+
+function dots(l){return`<div class="dots" aria-label="${S.lang==="th"?"ระดับสี":"colour level"}">${HEX.map((c,i)=>`<i style="background:${c}" class="${i===l?"on":""}" title="${esc(cname(i))}"></i>`).join("")}</div>`}
+function faceSVG(kind,hit){const droop=kind==="droop";
+  return`<svg viewBox="-70 -70 140 140" width="110" height="110" aria-hidden="true">
+  <circle r="60" fill="#F6E3D3" stroke="#8A6B57" stroke-width="2"/>
+  <circle cx="-22" cy="-12" r="6" fill="#3B2A20"/><circle cx="22" cy="${droop?-6:-12}" r="6" fill="#3B2A20"/>
+  ${droop?'<path d="M14 -10 Q22 -14 30 -6" stroke="#3B2A20" stroke-width="2.5" fill="none"/>':""}
+  <path d="${droop?"M-24 22 Q-2 34 24 34":"M-24 22 Q0 38 24 22"}" stroke="#7A3B2E" stroke-width="4" fill="none" stroke-linecap="round"/>
+  ${hit?'<circle cx="22" cy="18" r="24" fill="none" stroke="#C62828" stroke-width="3" stroke-dasharray="6 4"/>':""}</svg>`}
+
+/* ---------- phone views ---------- */
+function home(){const lv=lastVisit(S);
+  if(!lv){const signed=!!profileOf(S);
+    V.innerHTML=`<p class="muted">${t("hello")} ${esc(pname())} ${t("synthetic")}</p><div class="ball" style="background:#D5DBD9"></div>
+    <div class="big">${t("noColour")}</div>${dots(-1)}<p class="center">${t("noColourSub")}</p>
+    <button class="btn" id="measure">${signed?t("firstMeasure"):t("finishSignup")}</button><button class="btn warn" id="sos">${t("sos")}</button>`;
+    $("measure").onclick=()=>dispatch({type:signed?"START":"ONBOARD"});$("sos").onclick=()=>dispatch({type:"START"});return}
+  const l=lv.level,c=COL[S.lang][l],left=curMissions().filter(k=>!S.done[S.pid+k]).length;
+  V.innerHTML=`<p class="muted">${t("hello")} ${esc(pname())} ${t("synthetic")}</p>
+  <div class="ball" style="background:${HEX[l]}"></div>
+  <div class="big">${S.lang==="th"?"สี":""}${c.n}<br><span class="small muted" style="font-weight:400">${c.m}</span></div>${dots(l)}
+  <p class="center">${c.a}</p><div class="card"><b>${t("nextVisit")}</b><span>${c.next}</span></div>
+  <button class="btn" id="measure">${t("measure")}</button>
+  <button class="btn alt" id="goM">${t("mToday")} (${left})</button>
+  <button class="btn warn" id="sos">${t("sos")}</button>`;
+  $("measure").onclick=()=>dispatch({type:"START"});$("goM").onclick=()=>dispatch({type:"GO",v:"mission"});$("sos").onclick=()=>dispatch({type:"START"})}
+function prog(i){return`<div class="prog">${[0,1,2,3,4,5].map(j=>`<i class="${j<=i?"on":""}"></i>`).join("")}</div><p class="small muted center">${t("step")} ${i+1} ${t("of")} 6</p>`}
+function faceStep(){const f=S.bf.face,r=f&&SSIME.SIM.face[f];
+  V.innerHTML=`${prog(0)}<h3>${t("s1")}</h3><p>${t("faceQ")}</p><span class="sim">${t("simTag")}</span>
+  <div class="faces"><button data-v="normal" aria-pressed="${f==="normal"}">${faceSVG("normal",false)}${t("faceN")}</button><button data-v="droop" aria-pressed="${f==="droop"}">${faceSVG("droop",f==="droop")}${t("faceD")}</button></div>
+  ${r?`<p class="airesult ${r.abnormal?"bad":""}">${r.abnormal?t("faceBad"):t("faceOk")} · ${t("conf")} ${Math.round((r.abnormal?r.score:1-r.score)*100)}%</p>`:""}
+  <button class="btn" id="nx" ${f?"":"disabled"}>${t("next")}</button><button class="btn alt" id="bk">${t("cancel")}</button>`;
+  V.querySelectorAll(".faces button").forEach(b=>b.onclick=()=>dispatch({type:"FACE",v:b.dataset.v}));
+  $("nx").onclick=()=>dispatch({type:"NEXT",v:"speech"});$("bk").onclick=()=>dispatch({type:"GO",v:"home"})}
+function speechStep(){const sp=S.bf.speech,r=sp&&SSIME.SIM.speech[sp];
+  V.innerHTML=`${prog(1)}<h3>${t("s1")}</h3><p>${t("speechQ")}</p><p class="qq">${t("sentence")}</p><span class="sim">${t("simTag")}</span>
+  <div class="faces"><button data-v="clear" aria-pressed="${sp==="clear"}">🎙 ${t("spC")}</button><button data-v="slurred" aria-pressed="${sp==="slurred"}">🎙 ${t("spS")}</button></div>
+  ${r?`<p class="airesult ${r.abnormal?"bad":""}">${r.abnormal?t("spBad"):t("spOk")} · ${t("conf")} ${Math.round((r.abnormal?r.score:1-r.score)*100)}%</p>`:""}
+  <button class="btn" id="nx" ${sp?"":"disabled"}>${t("next")}</button><button class="btn alt" id="bk">${t("back")}</button>`;
+  V.querySelectorAll(".faces button").forEach(b=>b.onclick=()=>dispatch({type:"SPEECH",v:b.dataset.v}));
+  $("nx").onclick=()=>dispatch({type:"NEXT",v:"bea"});$("bk").onclick=()=>dispatch({type:"BACK",v:"face"})}
+const yn=(k,label,val,act)=>`<div class="row"><span>${label}</span><span class="seg" data-k="${k}" data-act="${act}"><button aria-pressed="${!!val}" data-v="1">${t("yes")}</button><button aria-pressed="${!val}" data-v="0">${t("no")}</button></span></div>`;
+function wireYN(){V.querySelectorAll(".seg").forEach(sg=>sg.querySelectorAll("button").forEach(b=>b.onclick=()=>dispatch({type:sg.dataset.act,k:sg.dataset.k,v:+b.dataset.v})))}
+function beaStep(){V.innerHTML=`${prog(2)}<h3>${t("s1")}</h3><p>${t("beaQ")}</p>
+  ${yn("B",t("B"),S.bf.B,"BEA")}${yn("E",t("E"),S.bf.E,"BEA")}${yn("A",t("A"),S.bf.A,"BEA")}
+  <p class="small muted">${t("Tn")}</p><button class="btn" id="nx">${t("next")}</button><button class="btn alt" id="bk">${t("back")}</button>`;
+  wireYN();$("nx").onclick=()=>dispatch({type:"BEFAST_DONE",time:new Date().toLocaleTimeString(S.lang==="th"?"th-TH":"en-NZ",{hour:"2-digit",minute:"2-digit"})});$("bk").onclick=()=>dispatch({type:"BACK",v:"speech"})}
+const NUM={sbp:{i:3,u:"mmhg"},dbp:{i:4,u:"mmhg"},fbs:{i:5,u:"mgdl"}};
+function numStep(k){const d=NUM[k],[lo,hi]=({sbp:[70,260],dbp:[40,160],fbs:[40,500]})[k];
+  V.innerHTML=`${prog(d.i)}<div class="qq">${t(k)}</div><div class="num" id="num" aria-live="polite">${typed||"&nbsp;"}</div>
+  <p class="small muted center">${t(d.u)}</p><p class="err" id="err" role="alert">${S.error===k?`${t("range")} ${lo}–${hi} ${t("tryAgain")}`:""}</p>
+  <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join("")}<button data-n="del">${t("del")}</button><button data-n="0">0</button><button data-n="ok" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">${t("next")}</button></div>
+  <button class="btn alt" id="bk">${t("back")}</button>`;
+  V.querySelectorAll(".pad button").forEach(b=>b.onclick=()=>{const n=b.dataset.n;
+    if(n==="del")typed=typed.slice(0,-1);
+    else if(n==="ok"){if(!typed){$("err").textContent=t("enterFirst");return}const v=+typed;typed="";dispatch({type:"VALUE",k,v});return}
+    else if(typed.length<3)typed+=n;$("num").innerHTML=typed||"&nbsp;"});
+  $("bk").onclick=()=>{typed="";dispatch({type:"BACK",v:k==="sbp"?"bea":k==="dbp"?"sbp":"dbp"})}}
+function ynStep(){V.innerHTML=`<div class="qq">${t("ynQ")}</div>${yn("smoke",t("smoke"),S.visit.smoke,"ANSWER")}${yn("htdx",t("htdx"),S.visit.htdx,"ANSWER")}${yn("dmdx",t("dmdx"),S.visit.dmdx,"ANSWER")}
+  <button class="btn" id="see">${t("see")}</button><button class="btn alt" id="bk">${t("back")}</button>`;
+  wireYN();$("see").onclick=()=>dispatch({type:"SEE"});$("bk").onclick=()=>dispatch({type:"BACK",v:"fbs"})}
+function reasonText(r){if(r.type==="befast")return`${t("found")} ${r.flags.join(", ")}`;const x=r.x;
+  const main=r.type==="bp"?fmt(t("bpIs"),{s:x.sbp,d:x.dbp,c:cname(r.b)}):fmt(t("sugarIs"),{g:x.fbs,c:cname(r.g)});
+  return main+(r.b!==r.g?` · ${t("otherBetter")}`:"")}
+function cvCard(r){if(r.cv==null)return`<div class="card"><b>${t("cvH")}</b><span class="small muted">${r.cvNote==="stroke"?t("cvStroke"):t("cvAge")}</span></div>`;
+  const x=r.reason.x,r2=SSIME.cvRisk({...x,sbp:Math.max(110,x.sbp-20),smoke:0});
+  return`<div class="card"><b>${t("cvH")}</b><span>${fmt(t("cvTxt"),{n:per100(r.cv)})}</span><span class="small muted">${fmt(t("cvIf"),{s:x.smoke?t("quit"):"",n:per100(r2)})}</span>
+  ${r.cvHigh?`<p class="alert small">${t("cvHigh")}</p><p class="small muted">${t("cvOver")}</p>`:""}</div>`}
+function resultStep(){const r=S.result,l=r.level,c=COL[S.lang][l],lv=lastVisit(S),d=lv?lv.level-l:0;
+  V.innerHTML=`<p class="small muted center">${t("today")}</p><div class="ball" style="background:${HEX[l]}"></div>
+  <div class="big">${S.lang==="th"?"สี":""}${c.n}<br><span class="small muted" style="font-weight:400">${c.m}</span></div>${dots(l)}
+  <p class="center ${d>0?"up":d<0?"down":""}">${!lv?t("baseline"):d>0?fmt(t("better"),{n:d}):d<0?fmt(t("worse"),{n:-d}):t("same")}</p>
+  <div class="card"><b>${t("whyH")}</b><span class="small">${reasonText(r.reason)}</span></div>
+  <div class="card"><b>${t("doH")}</b><span class="small">${c.a} · ${t("nextVisit")} ${c.next}</span></div>${cvCard(r)}
+  ${l===5?`<div class="alert">${c.a} · ${t("call")} <span class="n">1669</span></div>`:""}
+  <button class="btn" id="sv">${t("save")}</button>`;$("sv").onclick=()=>dispatch({type:"SAVE"})}
+function blackStep(){const r=S.result;
+  V.innerHTML=`<div class="ball" style="background:${HEX[6]}"></div><div class="big">${t("blackH")}</div>${dots(6)}
+  <div class="alert">${t("call")} <span class="n">1669</span> ${t("now")}<br><span style="font-weight:400">${t("golden")}</span></div>
+  <div class="card"><b>${t("onset")}</b><span>${esc(S.onset||"")}</span></div>
+  <div class="card"><b>${t("whyH")}</b><span class="small">${reasonText(r.reason)}</span></div>
+  <p class="small muted">${t("skipped")}</p>${cvCard(r)}
+  <button class="btn" id="sv">${t("save")}</button>`;$("sv").onclick=()=>dispatch({type:"SAVE"})}
+
+/* onboarding (first-time user) */
+function consentStep(){V.innerHTML=`<img class="mascot" src="mascot.jpg" alt="${S.lang==="th"?"น้องปิงปอง":"Nong Ping-Pong"}">
+  <h3 class="center">${t("consentH")}</h3><p>${t("consentTxt")}</p><p class="small muted">${t("consentDemo")}</p>
+  <button class="btn" id="ok">${t("agree")}</button>`;$("ok").onclick=()=>dispatch({type:"CONSENT"})}
+const PNUM={age:{i:0,u:"yrs"},height:{i:1,u:"cm"},waist:{i:2,u:"cm"}};
+function pprog(i){return`<div class="prog">${[0,1,2,3].map(j=>`<i class="${j<=i?"on":""}"></i>`).join("")}</div><p class="small muted center">${t("profH")} · ${i+1} ${t("of")} 4</p>`}
+function pnumStep(k){const d=PNUM[k],[lo,hi]=SSIME.RANGES[k];
+  V.innerHTML=`${pprog(d.i)}<div class="qq">${t(k)}</div><div class="num" id="num" aria-live="polite">${typed||"&nbsp;"}</div>
+  <p class="small muted center">${t(d.u)}</p><p class="err" id="err" role="alert">${S.error===k?`${t("range")} ${lo}–${hi} ${t("tryAgain")}`:""}</p>
+  <div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join("")}<button data-n="del">${t("del")}</button><button data-n="0">0</button><button data-n="ok" style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)">${t("next")}</button></div>`;
+  V.querySelectorAll(".pad button").forEach(b=>b.onclick=()=>{const n=b.dataset.n;
+    if(n==="del")typed=typed.slice(0,-1);
+    else if(n==="ok"){if(!typed){$("err").textContent=t("enterFirst");return}const v=+typed;typed="";dispatch({type:"PVALUE",k,v});return}
+    else if(typed.length<3)typed+=n;$("num").innerHTML=typed||"&nbsp;"})}
+function pynStep(){const d=S.draft;
+  V.innerHTML=`${pprog(3)}<div class="row"><span>${t("sexQ")}</span><span class="seg" data-k="sex" data-act="PANS"><button aria-pressed="${d.sex===1}" data-v="1">${t("male")}</button><button aria-pressed="${d.sex!==1}" data-v="0">${t("female")}</button></span></div>
+  ${yn("htdx",t("htdx"),d.htdx,"PANS")}${yn("dmdx",t("dmdx"),d.dmdx,"PANS")}${yn("smoke",t("smoke"),d.smoke,"PANS")}
+  <button class="btn" id="ok">${t("profDone")}</button>`;wireYN();$("ok").onclick=()=>dispatch({type:"PROFILE_DONE"})}
+function kapPreStep(){V.innerHTML=`<h3>${t("kapPreH")}</h3><p class="small muted">${t("kapPreSub")}</p><span class="sim">${t("kapSample")}</span>
+  ${Object.keys(KAPQ.th).map(k=>yn(k,`${k} · ${KAPQ[S.lang][k]}`,S.kapAns[k],"KAP_ANS")).join("")}
+  <button class="btn" id="ok">${t("kapDone")}</button><button class="btn alt" id="sk">${t("skip")}</button>`;
+  wireYN();$("ok").onclick=()=>dispatch({type:"KAPPRE_SAVE"});$("sk").onclick=()=>dispatch({type:"KAPPRE_SKIP"})}
+
+function curMissions(){const p=S.picks[S.pid];return p?p.keys:SSIME.ruleMissions(curX())}
+function mission(){const p=S.picks[S.pid],keys=curMissions();
+  V.innerHTML=`<h3>${fmt(t("misH"),{p:esc(pname())})}</h3><p class="small muted">${t("misSub")}</p>
+  <span class="badge ${p&&p.src==="ai"?"":"rule"}">${p&&p.src==="ai"?t("byAI"):p&&p.src==="fallback"?t("aiFallback"):t("byRule")}</span>
+  ${keys.map(k=>{const on=!!S.done[S.pid+k],w=p&&p.why&&p.why[k];return`<div class="mission"><span class="tag">${MTAG[k]}</span><div class="body"><b>${MIS[S.lang][k]}</b>${w?`<p class="why"></p>`:""}</div><button class="done" aria-pressed="${on}" data-k="${k}">${on?t("doneOk"):t("done")}</button></div>`}).join("")}
+  <button class="btn" id="ai">${t("aiPick")}</button><button class="btn alt" id="ask">${t("askBot")}</button>`;
+  V.querySelectorAll(".why").forEach((el,i)=>{const k=keys.filter(k=>p&&p.why&&p.why[k])[i];el.textContent=p.why[k]});
+  V.querySelectorAll(".done").forEach(b=>b.onclick=()=>dispatch({type:"DONE",k:b.dataset.k}));
+  $("ai").onclick=aiPick;$("ask").onclick=()=>dispatch({type:"GO",v:"chat"})}
+async function aiPick(){const b=$("ai");if(!b||busy)return;busy=true;b.disabled=true;b.textContent=t("aiPicking");
+  const x=curX(),qs=(chatMsgs[S.pid]||[]).filter(m=>m.me).map(m=>m.t).slice(-5),lang=S.lang;
+  const fallback=()=>dispatch({type:"PICKS",keys:SSIME.ruleMissions(x),why:null,src:"fallback"});
+  if(!sample){busy=false;fallback();return}
+  const list=SSIME.MISSIONS.map(k=>`${k}: ${MIS.en[k]}`).join("\n");
+  const prompt=`You pick exactly 3 lifestyle missions for a fictional hypertension/diabetes patient in a Thai health app demo.
+Choose ONLY keys from this list:\n${list}\n
+Patient data: age ${x.age}, upper BP ${x.sbp}, lower BP ${x.dbp}, fasting sugar ${x.fbs}, smokes ${x.smoke?"yes":"no"}, waist/height ${(x.waist/x.height).toFixed(2)}, diagnosed HT ${x.htdx?"yes":"no"}, diagnosed DM ${x.dmdx?"yes":"no"}.
+Recent chat questions from the patient: ${qs.length?qs.map(q=>JSON.stringify(q)).join("; "):"none"}.
+Prefer missions that match what the patient asked about, then what their numbers need.
+Reply with JSON only: {"picks":[{"k":"<key>","why":"<one short sentence in ${lang==="th"?"Thai":"English"} that starts by naming the chat question or number that led to it>"}]}`;
+  try{const r=await sample(prompt,{modelTier:"quick",cache:false});const m=r.text.match(/\{[\s\S]*\}/);const j=JSON.parse(m[0]);
+    const picks=(j.picks||[]).filter(p=>SSIME.MISSIONS.includes(p.k)).slice(0,3);
+    if(picks.length<1)throw new Error("empty");const why={};picks.forEach(p=>why[p.k]=String(p.why||"").slice(0,160));
+    busy=false;dispatch({type:"PICKS",keys:[...new Set(picks.map(p=>p.k))],why,src:"ai"})}
+  catch(e){if(e&&e.code==="not_granted")sample=null;busy=false;fallback()}}
+
+/* chat */
+const STROKE=/ปากเบี้ยว|หน้าเบี้ยว|แขนอ่อนแรง|ขาอ่อนแรง|พูดไม่ชัด|ตามัว|ภาพซ้อน|เดินเซ|ชาครึ่งซีก|droop|slurred|weak arm|numb|can't speak|blurred/i;
+function scripted(q){const L=S.lang;
+  const map=[[/stroke|อาการ|befast|sign/i,8],[/golden|4\.5|ชั่วโมง|hour/i,9],[/ซ้ำ|again|another|recur/i,10],[/เค็ม|เกลือ|โซเดียม|น้ำปลา|salt|sodium/i,2],[/หวาน|น้ำตาล|ชานม|น้ำอัดลม|sugar|sweet/i,0],[/มัน|ทอด|กะทิ|ไขมัน|fat|oil|fried/i,1],[/บุหรี่|สูบ|smok/i,3],[/เหล้า|เบียร์|แอลกอฮอล์|alcohol|beer/i,4],[/อ้วน|น้ำหนัก|รอบเอว|weight|waist/i,5],[/ยา|ลืม|medicine|pill/i,6],[/สี|ปิงปอง|colou?r/i,7]];
+  if(STROKE.test(q))return(L==="th"?"โทร 1669 ทันที และจดเวลาที่เริ่มมีอาการ":"Call 1669 now and note the time symptoms started")+" (H9)";
+  for(const[re,i]of map)if(re.test(q)){if(i===6&&/สมุนไพร|herb/i.test(q))break;return HB[i][L].replace(/^\[[^\]]+\] /,"")+` (${HB[i].id})`}
+  return t("notInBook")}
+function rules(){const L=S.lang==="th"?"Thai":"English";return`You are "Nong Ping-Pong", a friendly education chatbot of a Thai health station for people with hypertension or diabetes.
+Rules:
+1. Answer ONLY from the handbook below and end with the topic id you used, e.g. (H3).
+2. If the question is not covered, say it is not in your handbook and suggest asking the health station staff. Never guess.
+3. Never diagnose, never give doses, never suggest stopping medicine.
+4. If the person describes any BEFAST sign, your first sentence tells them to call 1669 now.
+5. Keep it under 4 short lines, warm and simple. Reply in ${L}.`}
+function chat(){const msgs=chatMsgs[S.pid]||(chatMsgs[S.pid]=[{me:0,t:t("greet")}]);V.classList.add("chatv");
+  V.innerHTML=`<div class="msgs" id="msgs" aria-live="polite">${msgs.map(m=>`<div class="mrow ${m.me?"me":""}">${m.me?"":`<img src="mascot.jpg" alt="">`}<div class="m"></div></div>`).join("")}</div>${msgs.some(m=>m.sos)?`<div class="alert">${t("call")} <span class="n">1669</span> ${t("now")}</div>`:""}`;
+  V.querySelectorAll(".m").forEach((d,i)=>d.textContent=msgs[i].t);V.scrollTop=V.scrollHeight;
+  const ci=$("chatInput");ci.hidden=false;
+  ci.innerHTML=`<div class="qr">${t("qr").map(q=>`<button>${esc(q)}</button>`).join("")}</div><form class="input" id="cf"><input id="cin" placeholder="${t("ph")}" autocomplete="off" aria-label="${t("ph")}"><button type="submit">${t("send")}</button></form><p class="err small" id="cerr" style="padding:0 12px">${sample?"":t("offline")}</p>`;
+  ci.querySelectorAll(".qr button").forEach(b=>b.onclick=()=>ask(b.textContent));
+  $("cf").onsubmit=e=>{e.preventDefault();const q=$("cin").value;if(!q.trim()){$("cerr").textContent=t("typeFirst");return}$("cin").value="";ask(q)}}
+async function ask(q){if(busy)return;busy=true;const pid=S.pid,msgs=chatMsgs[pid],l=lastVisit(S).level;
+  let qq=q;if(/สีของฉัน|my colou?r/i.test(q))qq+=S.lang==="th"?` (ตอนนี้ฉันสี${cname(l)})`:` (my colour now: ${cname(l)})`;
+  msgs.push({me:1,t:q,sos:STROKE.test(q)});const bot={me:0,t:"…"};msgs.push(bot);if(S.tab==="chat")chat();
+  const el=()=>V.querySelectorAll(".m")[msgs.length-1];const h=chatHist[pid]||(chatHist[pid]=[]);
+  if(sample){try{const book=HB.map(x=>`[${x.id}] ${x[S.lang]}`).join("\n");
+      const r=await sample([{role:"user",content:rules()+"\n\nHandbook:\n"+book},{role:"assistant",content:"OK. I will answer only from the handbook."},...h,{role:"user",content:qq}],{modelTier:"quick",cache:false,onText:({text})=>{bot.t=text;const e=el();if(e&&S.tab==="chat"&&S.pid===pid)e.textContent=text}});
+      bot.t=r.text;h.push({role:"user",content:qq},{role:"assistant",content:r.text});chatHist[pid]=h.slice(-8)}
+    catch(e){bot.t=scripted(q);if(e&&e.code==="not_granted")sample=null}}
+  else bot.t=scripted(q);
+  busy=false;if(S.tab==="chat"&&S.pid===pid)chat()}
+
+function history(){const h=S.hist[S.pid],ls=h.map(r=>r.level),f=ls[0],now=ls[ls.length-1],d=f-now,P=PATIENTS[S.pid],pp=profileOf(S);
+  const okRec=r=>r&&r.level<6&&pp?{...pp,...r.visit}:null,a=okRec(h[0]),b=okRec(h[h.length-1]);const r0=a&&SSIME.cvRisk(a),r1=b&&SSIME.cvRisk(b);
+  const lab=i=>P.isNew?(i===h.length-1?t("todayL"):String(i+1)):i<MONTHS[S.lang].length?MONTHS[S.lang][i]:t("todayL");
+  const pre=P.kap?P.kap.pre:S.kapPre[S.pid],after=S.kap[S.pid]||(P.kap&&P.kap.m3),afterL=S.kap[S.pid]?t("kapNow"):t("kap3");
+  const bars=k=>`<span>${k}</span><div><div class="bar2"><b style="width:${pre[k]}%"></b></div><span class="small muted">${t("kapPre")} ${pre[k]}</span></div><div>${after?`<div class="bar2 now"><b style="width:${after[k]}%"></b></div><span class="small muted">${afterL} ${after[k]}</span>`:""}</div>`;
+  const journey=h.length?`<div class="tl">${ls.map((l,i)=>`<div><i style="background:${HEX[l]}" title="${esc(cname(l))}"></i>${lab(i)}</div>`).join("")}</div>
+  ${h.length===1?`<p class="card">${t("baseline")}</p>`:`<div class="card"><b class="${d>0?"up":d<0?"down":""}">${d>0?fmt(t("lvUp"),{n:d}):d<0?fmt(t("lvDown"),{n:-d}):t("lvSame")}</b><span class="small muted">${fmt(t("from"),{a:cname(f),b:cname(now),n:ls.length})}</span></div>`}`:`<p class="card">${t("noVisits")}</p>`;
+  V.innerHTML=`<h3>${t("histH")}</h3>${journey}
+  ${r0!=null&&r1!=null&&h.length>1?`<div class="card"><b>${t("risk10")}</b><span>${fmt(t("per100"),{a:per100(r0),b:per100(r1)})}</span></div>`:""}
+  <div class="card"><b>${t("kapH")}</b>${pre?`<div class="kap">${["K","A","P"].map(bars).join("")}</div>`:`<p class="alert small">${t("noKapBase")}</p>`}<span class="small muted">${t("kapSample")}</span></div>
+  ${S.kapOpen?`<div class="card">${Object.keys(KAPQ.th).map(k=>yn(k,`${k} · ${KAPQ[S.lang][k]}`,S.kapAns[k],"KAP_ANS")).join("")}<button class="btn" id="ks">${t("kapDone")}</button></div>`:`<button class="btn alt" id="ko">${t("kapTake")}</button>`}
+  <button class="btn" id="again">${t("again")}</button>`;
+  wireYN();if($("ko"))$("ko").onclick=()=>dispatch({type:"KAP_OPEN"});if($("ks"))$("ks").onclick=()=>dispatch({type:"KAP_SAVE"});$("again").onclick=()=>dispatch({type:"START"})}
+
+/* ---------- lab: state panel + walkthroughs ---------- */
+const W=[
+ {name:{th:"1 · เส้นทางปกติ",en:"1 · Happy path"},pid:"buaphan",desc:{th:"ป้าบัวผันไม่มีอาการ BEFAST ความดันลดลงเป็น 132/84 ดูว่าได้สีเขียวเข้ม (เพราะหมอเคยวินิจฉัย HT) และสีดีขึ้นจากครั้งก่อน",en:"Auntie Buaphan has no BEFAST signs and her blood pressure falls to 132/84. Watch for dark green (she has diagnosed HT) and an improvement on last time."},
+  steps:[["START"],["FACE","normal"],["NEXT","speech"],["SPEECH","clear"],["NEXT","bea"],["BEFAST_DONE"],["VALUE","sbp",132],["VALUE","dbp",84],["VALUE","fbs",98],["SEE"],["SAVE"]]},
+ {name:{th:"2 · BEFAST ผิดปกติ → สีดำ",en:"2 · BEFAST abnormal → black"},pid:"somsri",desc:{th:"ป้าสมศรีมุมปากตกและพูดไม่ชัด ดูว่าระบบให้สีดำทันที บอก 1669 และ 4.5 ชั่วโมง แล้วข้ามการกรอกค่าและ CV Risk",en:"Auntie Somsri's mouth droops and her speech is slurred. Watch for black at once, 1669 and the 4.5-hour window, with measurements and CV Risk skipped."},
+  steps:[["START"],["FACE","droop"],["NEXT","speech"],["SPEECH","slurred"],["NEXT","bea"],["BEFAST_DONE"],["SAVE"]]},
+ {name:{th:"3 · สีดีแต่ CV Risk สูง",en:"3 · Good colour, high CV Risk"},pid:"thongdee",desc:{th:"ลุงทองดีคุมความดันและน้ำตาลได้ (เขียวเข้ม) แต่อายุ 64 สูบบุหรี่และเป็นเบาหวาน ดูว่าสีไม่เปลี่ยน แต่มีข้อความเตือนความเสี่ยงสูงและหมายเหตุว่าค่าอาจสูงเกินจริง",en:"Uncle Thongdee's blood pressure and sugar are controlled (dark green), but he is 64, smokes and has diabetes. Watch: the colour stays, but a high-risk warning and an overestimate note appear."},
+  steps:[["START"],["FACE","normal"],["NEXT","speech"],["SPEECH","clear"],["NEXT","bea"],["BEFAST_DONE"],["VALUE","sbp",128],["VALUE","dbp",78],["VALUE","fbs",118],["ANSWER","smoke",1],["SEE"]]},
+ {name:{th:"4 · ความดันกับน้ำตาลไม่ตรงกัน + ค่าผิดช่วง",en:"4 · BP and sugar disagree + bad input"},pid:"ek",desc:{th:"คุณเอกพิมพ์ความดัน 300 ผิดก่อน (ต้องถูกปฏิเสธ) แล้วแก้เป็น 128/82 น้ำตาล 160 ดูว่าได้สีส้มจากน้ำตาล เพราะใช้สีที่แย่กว่า",en:"Khun Ek first types an upper pressure of 300 (it must be refused), then 128/82 with sugar 160. Watch for orange from sugar, because the worse colour wins."},
+  steps:[["START"],["FACE","normal"],["NEXT","speech"],["SPEECH","clear"],["NEXT","bea"],["BEFAST_DONE"],["VALUE","sbp",300],["VALUE","sbp",128],["VALUE","dbp",82],["VALUE","fbs",160],["SEE"]]},
+ {name:{th:"5 · ผู้ใช้ครั้งแรก",en:"5 · First-time user"},pid:"nid",desc:{th:"คุณนิดอายุ 45 ปี เปิดแอปครั้งแรก ไล่ตั้งแต่ยินยอม กรอกข้อมูลส่วนตัว ทำ KAP ก่อนเริ่ม ผ่าน BEFAST แล้ววัดค่าครั้งแรก ดูว่าได้ \"สีตั้งต้น\" (ไม่มีคำว่าดีขึ้นหรือแย่ลง) และ CV Risk คำนวณจากข้อมูลที่เพิ่งกรอก",en:"Khun Nid, 45, opens the app for the first time: consent, her details, the KAP pretest, BEFAST, then her first reading. Watch for a \"starting colour\" (no better or worse) and a CV Risk computed from the details she just entered."},
+  steps:[["CONSENT"],["PVALUE","age",45],["PVALUE","height",158],["PVALUE","waist",82],["PROFILE_DONE"],["KAP_ANS","K1",1],["KAP_ANS","A1",1],["KAP_ANS","A2",1],["KAPPRE_SAVE"],["START"],["FACE","normal"],["NEXT","speech"],["SPEECH","clear"],["NEXT","bea"],["BEFAST_DONE"],["VALUE","sbp",126],["VALUE","dbp",82],["VALUE","fbs",104],["SEE"],["SAVE"],["GO","history"]]},
+ {name:{th:"6 · อายุ 32 ปี (นอกช่วง CV Risk)",en:"6 · Age 32 (outside CV Risk range)"},pid:"boy",desc:{th:"คุณบอยอายุ 32 ปี สูบบุหรี่ และข้าม KAP ก่อนเริ่ม ดูว่ายังได้สีตามปกติ (เหลือง) แต่ CV Risk ขึ้นว่าใช้ไม่ได้ และหน้า \"สีของฉัน\" เตือนว่ายังไม่มีค่าตั้งต้น KAP",en:"Khun Boy, 32, smokes and skips the KAP pretest. Watch: he still gets a colour (yellow), CV Risk says it cannot be used, and \"My colours\" warns that there is no KAP starting point."},
+  steps:[["CONSENT"],["PVALUE","age",32],["PVALUE","height",175],["PVALUE","waist",92],["PANS","sex",1],["PANS","smoke",1],["PROFILE_DONE"],["KAPPRE_SKIP"],["START"],["FACE","normal"],["NEXT","speech"],["SPEECH","clear"],["NEXT","bea"],["BEFAST_DONE"],["VALUE","sbp",148],["VALUE","dbp",92],["VALUE","fbs",96],["SEE"],["SAVE"],["GO","history"]]}];
+function stepLabel(s){const L=S.lang,th=L==="th";const[a,b,c]=s;
+  switch(a){
+    case"START":return th?"กด \"วัดค่าวันนี้\"":"Tap \"Measure today\"";
+    case"FACE":return th?`F: เลือก${b==="droop"?"มุมปากตก":"หน้าปกติ"}`:`F: pick ${b==="droop"?"drooping":"normal"} face`;
+    case"SPEECH":return th?`S: เลือก${b==="slurred"?"พูดไม่ชัด":"พูดชัด"}`:`S: pick ${b} speech`;
+    case"NEXT":return th?"ต่อ":"Next";
+    case"BEFAST_DONE":return th?"B, E, A ตอบ \"ไม่\" แล้วกดต่อ":"Answer No to B, E, A and continue";
+    case"VALUE":return`${t(b).replace(/^② /,"")} = ${c}`;
+    case"ANSWER":return th?`${t(b)}: ใช่`:`${t(b)}: yes`;
+    case"SEE":return t("see");
+    case"CONSENT":return t("agree");
+    case"PVALUE":return`${t(b)} = ${c} ${t(b==="age"?"yrs":"cm")}`;
+    case"PANS":return b==="sex"?`${t("sexQ")}: ${c?t("male"):t("female")}`:`${t(b)}: ${c?t("yes"):t("no")}`;
+    case"PROFILE_DONE":return t("profDone");
+    case"KAP_ANS":return`KAP ${b}: ${t("yes")}`;
+    case"KAPPRE_SAVE":return t("kapDone");
+    case"KAPPRE_SKIP":return t("skip");
+    case"GO":return th?"เปิดแท็บ \"สีของฉัน\"":"Open \"My colours\"";
+    default:return t("save")}}
+function runStep(s){const[a,b,c]=s;
+  if(a==="FACE"||a==="SPEECH")dispatch({type:a,v:b});else if(a==="NEXT")dispatch({type:a,v:b});
+  else if(a==="BEFAST_DONE")dispatch({type:a,time:"10:15"});else if(a==="GO")dispatch({type:a,v:b});
+  else if(["VALUE","ANSWER","PVALUE","PANS","KAP_ANS"].includes(a))dispatch({type:a,k:b,v:c});else dispatch({type:a})}
+function lab(){const L=S.lang;
+  $("labH").textContent=t("labH");$("pickL").textContent=t("pickL");$("stateH").textContent=t("stateH");$("walkH").textContent=t("walkH");
+  const pk=$("pick");pk.innerHTML="";Object.keys(PATIENTS).forEach(id=>{const b=document.createElement("button");b.className="chip";b.textContent=PATIENTS[id][L];b.setAttribute("aria-pressed",id===S.pid);b.onclick=()=>{chatMsgs={};chatHist={};typed="";wstep=0;dispatch({type:"RESET",pid:id})};pk.appendChild(b)});
+  const st=t("st"),r=S.result,bfr=SSIME.befast(S.bf),v=S.visit,ch=S.changed;
+  const bfTxt=["face","speech","B","E","A"].filter(k=>S.bf[k]!==undefined).map(k=>`${k}=${S.bf[k]===1?t("yes"):S.bf[k]===0?t("no"):S.bf[k]}`).join(" · ")||t("none");
+  const vals=["sbp","dbp","fbs"].filter(k=>v[k]!=null).map(k=>`${k.toUpperCase()} ${v[k]}`).concat(v.smoke!=null?[`smoke ${v.smoke?t("yes"):t("no")}`]:[],v.htdx!=null?[`HT dx ${v.htdx?t("yes"):t("no")}`]:[],v.dmdx!=null?[`DM dx ${v.dmdx?t("yes"):t("no")}`]:[]).join(" · ")||t("none");
+  const pf=profileOf(S),src=pf||(S.step&&["age","height","waist","pyn"].includes(S.step)?S.draft:null);
+  const pfTxt=src?`${src.age??"?"} ${t("yrs")} · ${src.sex?t("male"):t("female")} · ${src.height??"?"}/${src.waist??"?"} ${t("cm")} · HT ${src.htdx?t("yes"):t("no")} · DM ${src.dmdx?t("yes"):t("no")}${pf?"":" (draft)"}`:t("none");
+  const kp=PATIENTS[S.pid].kap?PATIENTS[S.pid].kap.pre:S.kapPre[S.pid];
+  const rows=[["patient",esc(pname())],["profile",pfTxt],["kapPre",kp?`K ${kp.K} · A ${kp.A} · P ${kp.P}`:t("none")],["screen",`${S.tab}${S.step?" › "+S.step:""}`],["bf",esc(bfTxt)],["bfRes",S.step&&S.step!=="face"&&S.step!=="speech"&&S.step!=="bea"||S.result?(bfr.positive?`${t("positive")} (${bfr.flags.join(", ")})`:t("negative")):t("notyet")],
+    ["vals",esc(vals)],["level",r?`${esc(cname(r.level))}${r.level===6?"":""}`:t("notyet")],["reason",r?esc(reasonText(r.reason)):t("notyet")],
+    ["cv",r?(r.cv==null?(r.cvNote==="stroke"?t("cvStroke"):t("cvAge")):`${per100(r.cv)}/100${r.cvHigh?" · ≥20% ⚠":""}`):t("notyet")],
+    ["missions",curMissions().map(k=>MIS[L][k]).join(" · ")],["last",esc(S.last)+(S.error?" · ✗ "+(L==="th"?"ค่าผิดช่วง ถูกปฏิเสธ":"out of range, refused"):"")]];
+  $("state").innerHTML=rows.map(([k,val])=>`<dt>${st[k]}</dt><dd class="${ch.includes(k)?"changed":""}">${val}</dd>`).join("");
+  const wt=$("wtabs");wt.innerHTML="";W.forEach((w,i)=>{const b=document.createElement("button");b.className="chip";b.setAttribute("role","tab");b.setAttribute("aria-selected",i===scenario);b.setAttribute("aria-pressed",i===scenario);b.textContent=w.name[L];
+    b.onclick=()=>{scenario=i;wstep=0;chatMsgs={};chatHist={};typed="";dispatch({type:"RESET",pid:w.pid})};wt.appendChild(b)});
+  const w=W[scenario];$("wdesc").textContent=w.desc[L];
+  const ws=$("wsteps");ws.innerHTML="";w.steps.forEach((s,i)=>{const b=document.createElement("button");b.textContent=`${i+1}. ${stepLabel(s)}`;b.className=i<wstep?"did":i===wstep?"next":"";b.disabled=i!==wstep;
+    b.onclick=()=>{if(i===0&&S.pid!==w.pid)S=initial(w.pid,S.lang);wstep=i+1;runStep(s)};ws.appendChild(b)})}
+
+/* ---------- committee panel ---------- */
+const TEST={tp:17,fn:3,fp:13,tn:67};
+function jury(){const L=S.lang,m=t("map");$("juryH").textContent=t("juryH");
+  $("map").innerHTML=m.map(([h,d,b])=>`<div class="card"><b>${h}</b><span class="small">${d}</span><span class="badge ${b==="AI"?"":"rule"}">${b}</span></div>`).join("");
+  $("testH").textContent=t("testH");
+  $("cm").innerHTML=`<tr><th></th><th>${t("actual")}: ${t("strokeY")}</th><th>${t("actual")}: ${t("strokeN")}</th></tr><tr><td>${t("pred")}: ${t("strokeY")}</td><td>${TEST.tp}</td><td>${TEST.fp}</td></tr><tr><td>${t("pred")}: ${t("strokeN")}</td><td>${TEST.fn}</td><td>${TEST.tn}</td></tr>`;
+  const prec=TEST.tp/(TEST.tp+TEST.fp),sens=TEST.tp/(TEST.tp+TEST.fn),spec=TEST.tn/(TEST.tn+TEST.fp);
+  $("kpis").innerHTML=`<div class="card"><b>${t("prec")}</b><span class="kpi ${prec>=.5?"ok":"no"}">${Math.round(prec*100)}%</span><span class="small">${t("target")} ≥ 50% · ${prec>=.5?t("met"):t("notMet")}</span></div>
+  <div class="card"><b>${t("sens")}</b><span class="kpi">${Math.round(sens*100)}%</span></div><div class="card"><b>${t("spec")}</b><span class="kpi">${Math.round(spec*100)}%</span></div>`;
+  $("prevH").textContent=t("prevH");$("prevP").textContent=t("prevP");
+  const upd=()=>{const p=+$("prev").value/100,q=SSIME.precisionAt(sens,spec,p);$("prevOut").textContent=fmt(t("prevOut"),{p:Math.round(p*100),q:Math.round(q*100),ok:q>=.5?t("met"):t("notMet")})};
+  $("prev").oninput=upd;upd();$("simNote").textContent=t("simNote")}
+
+/* ---------- render ---------- */
+function render(){document.documentElement.lang=S.lang;
+  $("protoTag").textContent=t("proto");$("title").textContent=t("title");$("question").textContent=t("question");$("appName").textContent=t("app");
+  $("who").textContent=pname();$("foot").textContent=t("foot");
+  document.querySelectorAll("[data-lang]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===S.lang));
+  const tabsK=["home","mission","chat","history"],ic=["●","✓","?","↻"];
+  $("tabs").innerHTML=tabsK.map((k,i)=>`<button data-t="${k}" aria-current="${S.tab===k&&!S.step}"><span class="ic">${ic[i]}</span>${t("tabs")[i]}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{typed="";dispatch({type:"GO",v:b.dataset.t})});
+  V.classList.remove("chatv");$("chatInput").hidden=true;
+  if(S.step){({consent:consentStep,age:()=>pnumStep("age"),height:()=>pnumStep("height"),waist:()=>pnumStep("waist"),pyn:pynStep,kappre:kapPreStep,face:faceStep,speech:speechStep,bea:beaStep,sbp:()=>numStep("sbp"),dbp:()=>numStep("dbp"),fbs:()=>numStep("fbs"),yn:ynStep,result:resultStep,black:blackStep})[S.step]()}
+  else({home,mission,chat,history})[S.tab]();
+  if(S.tab!=="chat")V.scrollTop=0;
+  lab();jury()}
+document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>dispatch({type:"LANG",v:b.dataset.lang}));
+render();
+(async()=>{try{if(window.claude&&claude.use){const s=await claude.use("sample");if(s){sample=s;if(S.tab==="chat")render()}}}catch(e){}})();
+</script>
+</body></html>
